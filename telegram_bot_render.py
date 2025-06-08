@@ -8,9 +8,8 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTyp
 # Bot Configuration
 TOKEN = "7806675718:AAGbK98ymtpMH4cusrmuYXbHIDenvvb5zF4"
 GROUP_ID = -1002350897193
-TOPIC_ID = 11  # Optional
+TOPIC_ID = 11
 
-# Webhook target (save_signal.php endpoint)
 SAVE_SIGNAL_URL = "https://vvip.cuanity.id/save_signal.php"
 
 def parse_signal(text):
@@ -18,16 +17,33 @@ def parse_signal(text):
     patterns = {
         'token': r'#([A-Z]+USDT)',
         'entry': r'(?i)entry[:\s]*([\d.]+)',
-        'sl': r'(?i)sl[:\s]*([\d.]+)',
-        'tp1': r'(?i)tp ?1[:\s]*([\d.]+)',
-        'tp2': r'(?i)tp ?2[:\s]*([\d.]+)',
-        'tp3': r'(?i)tp ?3[:\s]*([\d.]+)',
-        'tp4': r'(?i)tp ?4[:\s]*([\d.]+)'
+        'sl': r'(?i)(stop ?loss|sl)[:\s]*([\d.]+)',
+        'targets': r'(?i)targets[:\s]*([\d.\s\-]+)'
     }
-    for key, pattern in patterns.items():
-        match = re.search(pattern, text)
-        if match:
-            signal[key] = match.group(1)
+
+    # Token
+    token_match = re.search(patterns['token'], text)
+    if token_match:
+        signal['token'] = token_match.group(1)
+
+    # Entry
+    entry_match = re.search(patterns['entry'], text)
+    if entry_match:
+        signal['entry'] = entry_match.group(1)
+
+    # Stop Loss
+    sl_match = re.search(patterns['sl'], text)
+    if sl_match:
+        signal['sl'] = sl_match.group(2)
+
+    # Targets
+    targets_match = re.search(patterns['targets'], text)
+    if targets_match:
+        targets_text = targets_match.group(1)
+        targets = re.findall(r'[\d.]+', targets_text)
+        for i, value in enumerate(targets[:4]):
+            signal[f'tp{i+1}'] = value
+
     return signal if 'entry' in signal and 'sl' in signal and 'token' in signal else None
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
